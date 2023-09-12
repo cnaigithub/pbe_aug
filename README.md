@@ -7,7 +7,7 @@
 - 압축해제 후 ./ 로 이동
 - 다운로드 받은 데이터 이동 후의 폴더 구조
 ```
-Paint-by-Example
+pbe_aug
 ├── gookbang
 │  ├── pbe_aug_res
 │  ├── video
@@ -27,9 +27,12 @@ Paint-by-Example
 │  │  ├── ...
 │  │  ├── Aregion 15-2
 ```
+
+```
 ### 실행
 git clone https://github.com/cnaigithub/pbe_aug.git
-cd Paint-by-Example
+cd pbe_aug
 conda env create -f environment.yaml
-conda activate Paint-by-Example
+conda activate pbe_aug
 python pbe_aug.py 
+```

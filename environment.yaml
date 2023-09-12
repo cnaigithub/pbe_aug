@@ -1,4 +1,4 @@
-name: Paint-by-Example
+name: pbe_aug
 channels:
   - pytorch
   - defaults
@@ -16,6 +16,7 @@ dependencies:
     - opencv-python==4.1.2.30
     - pudb==2019.2
     - invisible-watermark
+    - imwatermark
     - imageio==2.9.0
     - imageio-ffmpeg==0.4.2
     - pytorch-lightning==1.4.2
