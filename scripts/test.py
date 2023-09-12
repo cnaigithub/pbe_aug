@@ -123,17 +123,8 @@ def get_tensor_clip(normalize=True, toTensor=True):
                                                 (0.26862954, 0.26130258, 0.27577711))]
     return torchvision.transforms.Compose(transform_list)
 
-def init_model_ret():
-    config = 'configs/v1.yaml'
-    ckpt = 'pretrained_models/model.ckpt'
-    config = OmegaConf.load(f"{config}")
-    model = load_model_from_config(config, f"{ckpt}")
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    model = model.to(device)
-    return model
 
-
-def main(model, input_mask, input_img, input_ref):
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -274,16 +265,12 @@ def main(model, input_mask, input_img, input_ref):
     )
     opt = parser.parse_args()
 
-    
-    opt.plms = True
-    opt.outdir = 'results'
-    opt.mask_path = input_mask
-    opt.reference_path = input_ref
-    opt.seed = -1
-    opt.scale = 5
-    seed_everything(opt.seed)
+    config = OmegaConf.load(f"{opt.config}")
+    model = load_model_from_config(config, f"{opt.ckpt}")
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
+
     if opt.plms:
         sampler = PLMSSampler(model)
     else:
@@ -312,9 +299,9 @@ def main(model, input_mask, input_img, input_ref):
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
-                filename = 'test'
-                og_h, og_w, _ = input_img.shape
-                img_p = Image.fromarray(input_img).convert("RGB").resize((512,512))
+                filename=os.path.basename(opt.image_path)
+                img_p = Image.open(opt.image_path).convert("RGB").resize((512,512))
+                og_w, og_h = img_p.size
                 image_tensor = get_tensor()(img_p)
                 image_tensor = image_tensor.unsqueeze(0)
                 ref_p = Image.open(opt.reference_path).convert("RGB").resize((224,224))
@@ -388,14 +375,28 @@ def main(model, input_mask, input_img, input_ref):
                         img = put_watermark(img, wm_encoder)
                         img.save(os.path.join(grid_path, 'grid-'+filename[:-4]+'_'+str(opt.seed)+'.png'))
                         
-
-
                         x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                         img = Image.fromarray(x_sample.astype(np.uint8))
                         img = img.resize((og_w, og_h))
-                        return img
-
-                    
+                        
+                        img.save(os.path.join(result_path, filename[:-4]+'_'+str(opt.seed)+".png"))
+                        mask_save=255.*rearrange(un_norm(inpaint_mask[i]).cpu(), 'c h w -> h w c').numpy()
+                        mask_save= cv2.cvtColor(mask_save,cv2.COLOR_GRAY2RGB)
+                        mask_save = Image.fromarray(mask_save.astype(np.uint8))
+                        mask_save.save(os.path.join(sample_path, filename[:-4]+'_'+str(opt.seed)+"_mask.png"))
+                        GT_img=255.*rearrange(all_img[0], 'c h w -> h w c').numpy()
+                        GT_img = Image.fromarray(GT_img.astype(np.uint8))
+                        GT_img.save(os.path.join(sample_path, filename[:-4]+'_'+str(opt.seed)+"_GT.png"))
+                        inpaint_img=255.*rearrange(all_img[1], 'c h w -> h w c').numpy()
+                        inpaint_img = Image.fromarray(inpaint_img.astype(np.uint8))
+                        inpaint_img.save(os.path.join(sample_path, filename[:-4]+'_'+str(opt.seed)+"_inpaint.png"))
+                        ref_img=255.*rearrange(all_img[2], 'c h w -> h w c').numpy()
+                        ref_img = Image.fromarray(ref_img.astype(np.uint8))
+                        ref_img.save(os.path.join(sample_path, filename[:-4]+'_'+str(opt.seed)+"_ref.png"))
 
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")
+
+
+if __name__ == "__main__":
+    main()
